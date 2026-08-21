@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AliExpress Tracking Number Collector
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.7.2
+// @version      1.7.3
 // @description  Collect unique AliExpress tracking numbers via mtop.ae.ld.querydetail (sequential)
 // @author       Mark Ha
 // @match        https://www.aliexpress.com/p/order/*
@@ -1066,6 +1066,14 @@
     panel.innerHTML = `
       <style>
         #${PANEL_ID} {
+          --ae-red: #e43225;
+          --ae-orange: #ff6a00;
+          --ae-text: #222222;
+          --ae-muted: #757575;
+          --ae-border: #e8e8e8;
+          --ae-bg: #ffffff;
+          --ae-surface: #fafafa;
+          --ae-shadow: 0 8px 28px rgba(228, 50, 37, 0.22);
           position: fixed;
           top: 72px;
           right: 16px;
@@ -1074,12 +1082,12 @@
           max-height: min(70vh, 560px);
           display: flex;
           flex-direction: column;
-          background: #111827;
-          color: #f9fafb;
-          border: 1px solid #374151;
-          border-radius: 10px;
-          box-shadow: 0 12px 40px rgba(0,0,0,.35);
-          font: 13px/1.4 ui-sans-serif, system-ui, sans-serif;
+          background: var(--ae-bg);
+          color: var(--ae-text);
+          border: 1px solid var(--ae-border);
+          border-radius: 12px;
+          box-shadow: var(--ae-shadow);
+          font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
           overflow: hidden;
         }
         #${PANEL_ID} .ae-tc-head {
@@ -1088,18 +1096,19 @@
           justify-content: space-between;
           gap: 8px;
           padding: 10px 12px;
-          background: #1f2937;
-          border-bottom: 1px solid #374151;
+          background: var(--ae-red);
+          color: #fff;
+          border-bottom: none;
           cursor: move;
           user-select: none;
         }
         #${PANEL_ID} .ae-tc-title { font-weight: 700; font-size: 13px; }
         #${PANEL_ID} .ae-tc-count {
-          color: #9ca3af;
+          color: rgba(255, 255, 255, 0.85);
           font-size: 12px;
         }
         #${PANEL_ID} .ae-tc-status {
-          color: #93c5fd;
+          color: #ffe0b2;
           font-size: 11px;
           min-height: 1.2em;
           margin-top: 2px;
@@ -1109,35 +1118,66 @@
           flex-wrap: wrap;
           gap: 6px;
           padding: 8px 10px;
-          border-bottom: 1px solid #374151;
+          border-bottom: 1px solid var(--ae-border);
+          background: var(--ae-surface);
         }
         #${PANEL_ID} button {
           appearance: none;
-          border: 1px solid #4b5563;
-          background: #374151;
-          color: #f9fafb;
-          border-radius: 6px;
-          padding: 5px 8px;
+          border: 1px solid var(--ae-red);
+          background: var(--ae-red);
+          color: #fff;
+          border-radius: 16px;
+          padding: 5px 10px;
           font-size: 12px;
+          font-weight: 600;
           cursor: pointer;
+          transition: background 0.1s ease, border-color 0.1s ease;
         }
-        #${PANEL_ID} button:hover { background: #4b5563; }
+        #${PANEL_ID} button:hover {
+          background: var(--ae-orange);
+          border-color: var(--ae-orange);
+        }
+        #${PANEL_ID} button[data-act="toggle"] {
+          background: rgba(255, 255, 255, 0.18);
+          border-color: rgba(255, 255, 255, 0.45);
+          border-radius: 12px;
+          min-width: 28px;
+          padding: 2px 8px;
+        }
+        #${PANEL_ID} button[data-act="toggle"]:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border-color: #fff;
+        }
+        #${PANEL_ID} button[data-act="stop"],
+        #${PANEL_ID} button[data-act="clear"] {
+          background: var(--ae-bg);
+          color: var(--ae-red);
+        }
+        #${PANEL_ID} button[data-act="stop"]:hover,
+        #${PANEL_ID} button[data-act="clear"]:hover {
+          background: #fff5f2;
+          border-color: var(--ae-orange);
+          color: var(--ae-orange);
+        }
         #${PANEL_ID} .ae-tc-list {
           overflow: auto;
           padding: 8px 10px 12px;
           display: flex;
           flex-direction: column;
           gap: 8px;
+          background: var(--ae-bg);
         }
         #${PANEL_ID} .ae-tc-item {
-          background: #0b1220;
-          border: 1px solid #1f2937;
-          border-radius: 8px;
+          background: var(--ae-surface);
+          border: 1px solid var(--ae-border);
+          border-radius: 10px;
           padding: 8px;
         }
         #${PANEL_ID} .ae-tc-num {
           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
           font-size: 13px;
+          font-weight: 600;
+          color: var(--ae-text);
           word-break: break-all;
         }
         #${PANEL_ID} .ae-tc-meta {
@@ -1147,27 +1187,28 @@
           gap: 4px;
         }
         #${PANEL_ID} .ae-tc-order {
-          color: #d1d5db;
+          color: var(--ae-muted);
           font-size: 11px;
           line-height: 1.35;
-          border-left: 2px solid #374151;
+          border-left: 2px solid var(--ae-orange);
           padding-left: 8px;
         }
         #${PANEL_ID} .ae-tc-order-id {
-          color: #93c5fd;
+          color: var(--ae-red);
           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         }
         #${PANEL_ID} .ae-tc-order-product {
-          color: #9ca3af;
+          color: var(--ae-muted);
         }
         #${PANEL_ID} .ae-tc-sum {
           margin-top: 2px;
-          color: #86efac;
+          color: var(--ae-orange);
           font-size: 12px;
+          font-weight: 600;
           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         }
         #${PANEL_ID} .ae-tc-order-total {
-          color: #86efac;
+          color: var(--ae-orange);
           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         }
         #${PANEL_ID} .ae-tc-row {
@@ -1177,7 +1218,7 @@
           align-items: flex-start;
         }
         #${PANEL_ID} .ae-tc-empty {
-          color: #9ca3af;
+          color: var(--ae-muted);
           padding: 16px 8px;
           text-align: center;
         }
