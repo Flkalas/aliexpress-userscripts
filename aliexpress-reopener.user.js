@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AliExpress Reopener
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  AliExpress 상품 페이지에서 동일 상품을 여러 sourceType 채널로 새 탭에서 여는 플로팅 버튼을 띄웁니다.
 // @author       Mark Ha
 // @match        https://www.aliexpress.com/item/*
@@ -45,6 +45,13 @@
         style.id = 'aliexpress-reopener-style';
         style.textContent = `
             #${CONTAINER_ID} {
+                --ae-red: #e43225;
+                --ae-orange: #ff6a00;
+                --ae-text: #222222;
+                --ae-muted: #757575;
+                --ae-border: #e8e8e8;
+                --ae-bg: #ffffff;
+                --ae-shadow: 0 2px 10px rgba(228, 50, 37, 0.28);
                 position: fixed;
                 right: 16px;
                 bottom: 16px;
@@ -52,7 +59,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
-                font-family: system-ui, -apple-system, sans-serif;
+                font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
             }
             #${CONTAINER_ID} .axr-btn {
                 all: unset;
@@ -64,13 +71,13 @@
                 font-size: 14px;
                 font-weight: 600;
                 color: #fff;
-                background: #e62e04;
+                background: var(--ae-red);
                 border-radius: 24px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+                box-shadow: var(--ae-shadow);
                 transition: transform 0.1s ease, background 0.1s ease;
             }
             #${CONTAINER_ID} .axr-btn:hover {
-                background: #ff4518;
+                background: var(--ae-orange);
                 transform: translateY(-1px);
             }
             #${CONTAINER_ID} .axr-btn:active {
@@ -83,11 +90,16 @@
                 align-self: flex-end;
                 padding: 4px 10px;
                 font-size: 12px;
-                color: #666;
-                background: #fff;
-                border: 1px solid #ddd;
+                font-weight: 600;
+                color: var(--ae-red);
+                background: var(--ae-bg);
+                border: 1px solid var(--ae-border);
                 border-radius: 12px;
-                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+            }
+            #${CONTAINER_ID} .axr-toggle:hover {
+                border-color: var(--ae-orange);
+                color: var(--ae-orange);
             }
             #${CONTAINER_ID}.axr-collapsed .axr-btn {
                 display: none;
