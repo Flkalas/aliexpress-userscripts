@@ -7,8 +7,8 @@
 // @match        https://www.aliexpress.com/p/order/*
 // @match        https://*.aliexpress.com/p/order/*
 // @match        https://www.aliexpress.us/p/order/*
-// @updateURL    https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress_tracking_collector.user.js
-// @downloadURL  https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress_tracking_collector.user.js
+// @updateURL    https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-tracking-collector.user.js
+// @downloadURL  https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-tracking-collector.user.js
 // @grant        GM_setClipboard
 // @grant        GM_getValue
 // @grant        GM_setValue

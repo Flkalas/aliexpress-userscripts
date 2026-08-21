@@ -14,7 +14,7 @@ AliExpress용 Tampermonkey 유저스크립트 모음입니다. GitHub raw URL로
 |----------|------|------|
 | **AliExpress Reopener** | 상품 페이지에서 코인샵·꽁돈대첩 등 채널별 URL을 새 탭으로 엽니다 | [Install](https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-reopener.user.js) |
 | **배송비 포함 가격 표시기** | 수량·배송비 변경을 반영해 총액·개당 가격을 표시합니다 | [Install](https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-total-price.user.js) |
-| **Tracking Number Collector** | 주문 상세에서 송장번호를 모아 복사합니다 | [Install](https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress_tracking_collector.user.js) |
+| **Tracking Number Collector** | 주문 상세에서 송장번호를 모아 복사합니다 | [Install](https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-tracking-collector.user.js) |
 
 ## 업데이트
 
@@ -26,7 +26,7 @@ AliExpress용 Tampermonkey 유저스크립트 모음입니다. GitHub raw URL로
 
 - `aliexpress-reopener.user.js`
 - `aliexpress-total-price.user.js`
-- `aliexpress_tracking_collector.user.js`
+- `aliexpress-tracking-collector.user.js`
 
 ## 라이선스
 
