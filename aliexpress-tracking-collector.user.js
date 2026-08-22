@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AliExpress Tracking Number Collector
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.7.4
+// @version      1.7.5
 // @description  Collect unique AliExpress tracking numbers via mtop.ae.ld.querydetail (sequential)
 // @author       Mark Ha
 // @match        https://www.aliexpress.com/p/order/index.html*
@@ -98,6 +98,30 @@
       }
     }
     return [...ids.keys()];
+  }
+
+  /** OrderIds stored with empty product title (need API backfill). */
+  function listOrderIdsWithEmptyProduct() {
+    /** @type {Map<string, true>} */
+    const ids = new Map();
+    for (const orders of numbers.values()) {
+      for (const [orderId, entry] of Object.entries(orders)) {
+        const { product } = normalizeOrderEntry(entry);
+        if (!product) ids.set(orderId, true);
+      }
+    }
+    return [...ids.keys()];
+  }
+
+  function formatProductTitles(titles) {
+    const uniq = [
+      ...new Set(
+        (titles || [])
+          .map((t) => String(t || "").trim())
+          .filter(Boolean)
+      ),
+    ];
+    return uniq.length ? uniq.map((p) => p.slice(0, 80)).join(" / ") : "";
   }
 
   function serializeNumbers() {
@@ -417,14 +441,33 @@
       orderItem
         .querySelector(".order-item-header-right-info")
         ?.textContent?.match(/(\d{10,})/)?.[1] || undefined;
-    const products = [
+    let products = [
       ...orderItem.querySelectorAll(".order-item-content-info-name"),
     ]
       .map((el) => (el.textContent || "").trim())
       .filter(Boolean);
-    const product = products.length
-      ? products.map((p) => p.slice(0, 80)).join(" / ")
-      : undefined;
+    // Fallbacks when title node class/layout differs
+    if (!products.length) {
+      products = [
+        ...orderItem.querySelectorAll(
+          "a[title], img[alt], .order-item-content-info-name span"
+        ),
+      ]
+        .map((el) =>
+          (el.getAttribute?.("title") ||
+            el.getAttribute?.("alt") ||
+            el.textContent ||
+            "").trim()
+        )
+        .filter(
+          (t) =>
+            t.length >= 8 &&
+            !/^aliexpress$/i.test(t) &&
+            !/^\$/.test(t) &&
+            !/^\d+$/.test(t)
+        );
+    }
+    const product = formatProductTitles(products) || undefined;
     const totalText =
       orderItem.querySelector(".order-item-content-opt-price-total")
         ?.textContent ||
@@ -600,6 +643,24 @@
     return [...new Set(out.map((s) => s.trim()).filter(Boolean))];
   }
 
+  /** Product titles from querydetail packageItemList[].itemTitle */
+  function extractProductFromQueryDetail(res) {
+    const titles = [];
+    const lines = res?.data?.module?.trackingDetailLineList;
+    if (Array.isArray(lines)) {
+      for (const line of lines) {
+        const items = line?.packageItemList;
+        if (!Array.isArray(items)) continue;
+        for (const item of items) {
+          const t =
+            item?.itemTitle || item?.productTitle || item?.title || item?.name;
+          if (t) titles.push(String(t));
+        }
+      }
+    }
+    return formatProductTitles(titles);
+  }
+
   function getMtop() {
     const w = pageWindow();
     return w.lib && w.lib.mtop ? w.lib.mtop : null;
@@ -643,7 +704,10 @@
     if (/SESSION_EXPIRED|FAIL_SYS|RGV587|FAIL_SYS_USER/i.test(ret)) {
       throw new Error(ret || "API fail");
     }
-    return extractMailNosFromQueryDetail(res);
+    return {
+      mails: extractMailNosFromQueryDetail(res),
+      product: extractProductFromQueryDetail(res),
+    };
   }
 
   async function collectViaApi(orderList) {
@@ -667,8 +731,20 @@
       for (let attempt = 0; attempt < 2 && !ok; attempt += 1) {
         checkAbort();
         try {
-          const mails = await fetchMailsForOrder(orderId);
-          added += applyMailsForOrder(orderId, mails, { product, totalUsd });
+          const { mails, product: apiProduct } = await fetchMailsForOrder(
+            orderId
+          );
+          const bestProduct =
+            (product && product.length >= (apiProduct || "").length
+              ? product
+              : apiProduct) ||
+            product ||
+            apiProduct ||
+            "";
+          added += applyMailsForOrder(orderId, mails, {
+            product: bestProduct,
+            totalUsd,
+          });
           ok = true;
         } catch (err) {
           if (isAbortError(err)) throw err;
@@ -688,34 +764,48 @@
   }
 
   /**
-   * Re-query orders under prefixed trackings (CNG/AP/LP/N/…).
-   * Digits-only trackings are left alone.
+   * Re-query orders under prefixed trackings (CNG/AP/LP/N/…)
+   * and any orders still missing a product title.
+   * Digits-only trackings are left alone unless product is empty.
    */
   async function refreshPrefixedTrackings(liveOrderMetaById) {
     /** @type {Map<string, { product: string, totalUsd: number|null }>} */
     const metaMap = liveOrderMetaById || new Map();
-    const list = listOrderIdsUnderPrefixedTrackings();
-    if (!list.length) return 0;
-    if (!getMtop()) return 0;
+    const idSet = new Map();
+    for (const id of listOrderIdsUnderPrefixedTrackings()) idSet.set(id, true);
+    for (const id of listOrderIdsWithEmptyProduct()) idSet.set(id, true);
+    const list = [...idSet.keys()];
+    if (!list.length) return { updated: 0, productsFilled: 0 };
+    if (!getMtop()) return { updated: 0, productsFilled: 0 };
 
     let updated = 0;
+    let productsFilled = 0;
     for (let i = 0; i < list.length; i += 1) {
       checkAbort();
       const orderId = list[i];
       const fromPage = metaMap.get(orderId);
       const fromStore = findOrderMetaInStorage(orderId);
-      const product = fromPage?.product || fromStore.product || "";
+      const beforeProduct = fromStore.product || "";
+      let product = fromPage?.product || beforeProduct || "";
       const totalUsd =
         fromPage?.totalUsd != null ? fromPage.totalUsd : fromStore.totalUsd;
 
-      setStatus(`Refresh prefixed ${i + 1}/${list.length} · ${orderId}`);
+      setStatus(`Refresh ${i + 1}/${list.length} · ${orderId}`);
       try {
         const beforeMails = [];
         for (const [track, orders] of numbers.entries()) {
           if (orderId in orders) beforeMails.push(track);
         }
         beforeMails.sort();
-        const mails = await fetchMailsForOrder(orderId);
+        const { mails, product: apiProduct } = await fetchMailsForOrder(
+          orderId
+        );
+        if (
+          apiProduct &&
+          (!product || apiProduct.length > product.length)
+        ) {
+          product = apiProduct;
+        }
         applyMailsForOrder(orderId, mails, { product, totalUsd });
         const afterMails = [];
         for (const [track, orders] of numbers.entries()) {
@@ -723,6 +813,8 @@
         }
         afterMails.sort();
         if (beforeMails.join("|") !== afterMails.join("|")) updated += 1;
+        const afterProduct = findOrderMetaInStorage(orderId).product || "";
+        if (!beforeProduct && afterProduct) productsFilled += 1;
       } catch (err) {
         if (isAbortError(err)) throw err;
       }
@@ -730,7 +822,7 @@
       render();
       if (i < list.length - 1) await sleep(API_GAP_MS);
     }
-    return updated;
+    return { updated, productsFilled };
   }
 
   async function collectAllFast() {
@@ -757,8 +849,8 @@
       setStatus("No new Processed orders");
     }
 
-    // Re-query CNG/AP/N/… orders to pick up tracking updates (leave digits-only alone)
-    const prefixedUpdated = await refreshPrefixedTrackings(liveMeta);
+    // Re-query CNG/AP/N/… + fill missing product titles from API
+    const refreshed = await refreshPrefixedTrackings(liveMeta);
 
     saveToStorageNow();
     render();
@@ -768,7 +860,10 @@
         (pruned.removedOrders
           ? ` · pruned ${pruned.removedOrders} orders`
           : "") +
-        (prefixedUpdated ? ` · refreshed ${prefixedUpdated} prefixed` : "")
+        (refreshed.updated ? ` · refreshed ${refreshed.updated} prefixed` : "") +
+        (refreshed.productsFilled
+          ? ` · filled ${refreshed.productsFilled} titles`
+          : "")
     );
   }
 
