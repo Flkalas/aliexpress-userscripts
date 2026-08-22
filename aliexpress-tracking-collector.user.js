@@ -1,12 +1,15 @@
 // ==UserScript==
 // @name         AliExpress Tracking Number Collector
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.7.3
+// @version      1.7.4
 // @description  Collect unique AliExpress tracking numbers via mtop.ae.ld.querydetail (sequential)
 // @author       Mark Ha
-// @match        https://www.aliexpress.com/p/order/*
-// @match        https://*.aliexpress.com/p/order/*
-// @match        https://www.aliexpress.us/p/order/*
+// @match        https://www.aliexpress.com/p/order/index.html*
+// @match        https://*.aliexpress.com/p/order/index.html*
+// @match        https://www.aliexpress.us/p/order/index.html*
+// @exclude      https://www.aliexpress.com/p/order/detail.html*
+// @exclude      https://*.aliexpress.com/p/order/detail.html*
+// @exclude      https://www.aliexpress.us/p/order/detail.html*
 // @updateURL    https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-tracking-collector.user.js
 // @downloadURL  https://raw.githubusercontent.com/Flkalas/aliexpress-userscripts/master/aliexpress-tracking-collector.user.js
 // @grant        GM_setClipboard
@@ -19,6 +22,9 @@
 
 (function () {
   "use strict";
+
+  // Order detail pages must not run this collector (list-only).
+  if (/\/p\/order\/detail\.html/i.test(location.pathname)) return;
 
   const TRACK_RE =
     /Tracking\s*number\s*[:：]\s*([A-Z0-9][A-Z0-9-]{5,})/gi;
