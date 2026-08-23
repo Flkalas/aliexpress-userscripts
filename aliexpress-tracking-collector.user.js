@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AliExpress Tracking Number Collector
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.7.5
+// @version      1.7.6
 // @description  Collect unique AliExpress tracking numbers via mtop.ae.ld.querydetail (sequential)
 // @author       Mark Ha
 // @match        https://www.aliexpress.com/p/order/index.html*
@@ -43,7 +43,7 @@
    */
   const numbers = new Map();
 
-  /** Set true to cancel in-flight Scan/Collect loops. */
+  /** Set true to cancel in-flight Collect loops. */
   let abortFlag = false;
   let jobRunning = false;
   let saveTimer = null;
@@ -1132,16 +1132,7 @@
     }
   }
 
-  async function scanAll() {
-    await runJob(async () => {
-      const ready = await prepareOrderList();
-      if (!ready) return;
-      await collectAllFast();
-      setStatus(`Scan done · ${numbers.size} unique`);
-    });
-  }
-
-  async function hoverAllTrackStatus() {
+  async function collectAll() {
     await runJob(async () => {
       const ready = await prepareOrderList();
       if (!ready) return;
@@ -1335,8 +1326,7 @@
         <button type="button" data-act="toggle" title="Collapse">−</button>
       </div>
       <div class="ae-tc-actions">
-        <button type="button" data-act="scan">Scan</button>
-        <button type="button" data-act="hover">Collect</button>
+        <button type="button" data-act="collect">Collect</button>
         <button type="button" data-act="stop">Stop</button>
         <button type="button" data-act="copy">Copy MD</button>
         <button type="button" data-act="copy-nums">Copy #s</button>
@@ -1351,21 +1341,11 @@
       const btn = e.target.closest("button[data-act]");
       if (!btn) return;
       const act = btn.getAttribute("data-act");
-      if (act === "scan") {
-        btn.disabled = true;
-        const prev = btn.textContent;
-        btn.textContent = "Loading…";
-        try {
-          await scanAll();
-        } finally {
-          btn.disabled = false;
-          btn.textContent = prev;
-        }
-      } else if (act === "hover") {
+      if (act === "collect") {
         btn.disabled = true;
         btn.textContent = "Working…";
         try {
-          await hoverAllTrackStatus();
+          await collectAll();
         } finally {
           btn.disabled = false;
           btn.textContent = "Collect";
@@ -1507,7 +1487,7 @@
 
     if (!entries.length) {
       list.innerHTML =
-        '<div class="ae-tc-empty">No tracking numbers yet.<br>Click Scan or Collect (API).</div>';
+        '<div class="ae-tc-empty">No tracking numbers yet.<br>Click Collect.</div>';
       return;
     }
 
@@ -1562,11 +1542,11 @@
     const loaded = loadFromStorage();
     ensurePanel();
     render();
-    // Do NOT auto-scan — Collect uses mtop API only on click
+    // Do NOT auto-collect — Collect uses mtop API only on click
     setStatus(
       loaded
-        ? `Restored ${loaded} trackings · click Scan or Collect`
-        : "Idle · click Scan or Collect"
+        ? `Restored ${loaded} trackings · click Collect`
+        : "Idle · click Collect"
     );
   }
 
