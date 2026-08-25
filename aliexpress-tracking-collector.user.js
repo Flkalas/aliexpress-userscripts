@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AliExpress Tracking Number Collector
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.7.6
+// @version      1.7.7
 // @description  Collect unique AliExpress tracking numbers via mtop.ae.ld.querydetail (sequential)
 // @author       Mark Ha
 // @match        https://www.aliexpress.com/p/order/index.html*
@@ -1376,9 +1376,7 @@
       } else if (act === "copy-one") {
         const num = btn.getAttribute("data-num");
         if (num) {
-          const orders = numbers.get(num);
-          const sum = orders ? sumOrderTotals(orders) : null;
-          await copyText(sum != null ? `${num}\t${formatUsd(sum)}` : num);
+          await copyText(num);
           btn.textContent = "OK";
           setTimeout(() => (btn.textContent = "Copy"), 700);
         }
