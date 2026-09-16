@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Aliexpress 배송비 포함 가격 표시기 (Optimized)
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  상품 수량 변경과 배송비 변경을 감지하여 총 가격과 개당 가격을 동적으로 계산하여 표시합니다.
 // @author       Mark Ha
 // @match        *://*.aliexpress.com/item/*
@@ -31,15 +31,20 @@
             return 0;
         }
         const match = text.match(
-            /(?:Shipping|배송비?|운송비)\s*[:：]?\s*(?:US\s*)?\$?\s*([\d]+(?:[.,]\d+)?)/i
+            /(?:Shipping|Standard|배송비?|운송비|스탠다드)\s*[:：]?\s*(?:US\s*)?(?:[$₩€£¥])?\s*([\d]+(?:[.,]\d+)?)/i
         );
         if (!match) return 0;
-        return parseFloat(match[1].replace(',', '.'));
+        return extractNumber(match[1]);
     }
 
     function extractNumber(text) {
         const match = text.match(/[\d]{1,3}(?:,\d{3})*(?:\.\d+)?|[\d]+(?:\.\d+)?/);
         return match ? parseFloat(match[0].replaceAll(',', '')) : 0;
+    }
+
+    function extractCurrency(text) {
+        const match = text.match(/US\s*\$|[$₩€£¥]|\b(?:KRW|USD|EUR|GBP|JPY)\b/i);
+        return match ? match[0].replace(/\s+/g, ' ') : 'US $';
     }
 
     function findPriceElement() {
@@ -84,6 +89,7 @@
         }
 
         const basePrice = extractNumber(originalPrice);
+        const currency = extractCurrency(originalPrice);
         const quantity = parseInt(quantityElement.value, 10) || 1;
         const shipping = extractShippingCost(shippingContainer);
         if (!basePrice) return;
@@ -93,10 +99,11 @@
 
         let nextText;
         if (quantity === 1) {
-            nextText = `${originalPrice} (총 US $${total.toFixed(2)})`;
+            nextText = `${originalPrice} (총 ${currency}${currency === '₩' ? Math.round(total).toLocaleString('ko-KR') : total.toFixed(2)})`;
         } else {
-            const pricePerUnit = (total / quantity).toFixed(2);
-            nextText = `${originalPrice} (총 US $${total.toFixed(2)}, 수량: ${quantity}, 개당: US $${pricePerUnit})`;
+            const formatAmount = amount => currency === '₩' ? Math.round(amount).toLocaleString('ko-KR') : amount.toFixed(2);
+            const pricePerUnit = formatAmount(total / quantity);
+            nextText = `${originalPrice} (총 ${currency}${formatAmount(total)}, 수량: ${quantity}, 개당: ${currency}${pricePerUnit})`;
         }
 
         if (priceElement.textContent !== nextText) {
