@@ -29,8 +29,9 @@ test('Economy shipping on the reported item is included', () => {
     assert.equal(renderedPrice('Economy:\u00a0US $1.18\u00a0'), 'US $2.11 (총 US $3.29)');
 });
 
-test('free shipping still shows a quantity total', () => {
-    assert.equal(renderedPrice('Free shipping', '2'), 'US $2.11 (총 US $4.22, 수량: 2, 개당: US $2.11)');
+test('free shipping does not add a redundant total', () => {
+    assert.equal(renderedPrice('Free shipping'), 'US $2.11');
+    assert.equal(renderedPrice('Free shipping', '2'), 'US $2.11');
 });
 
 test('unknown shipping does not produce a misleading total', () => {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Aliexpress 배송비 포함 가격 표시기 (Optimized)
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.1.2
+// @version      1.1.3
 // @description  상품 수량 변경과 배송비 변경을 감지하여 총 가격과 개당 가격을 동적으로 계산하여 표시합니다.
 // @author       Mark Ha
 // @match        *://*.aliexpress.com/item/*
@@ -83,7 +83,8 @@
         const currency = extractCurrency(originalPrice);
         const quantity = parseInt(quantityElement.value, 10) || 1;
         const shipping = extractShippingCost(shippingContainer);
-        if (!basePrice || shipping === null) {
+        // 무료 배송에서는 상품가와 총액이 같으므로 중복 표시를 하지 않는다.
+        if (!basePrice || shipping === null || shipping === 0) {
             if (priceElement.textContent !== originalPrice) {
                 priceElement.textContent = originalPrice;
             }
