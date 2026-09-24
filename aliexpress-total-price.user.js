@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Aliexpress 배송비 포함 가격 표시기 (Optimized)
 // @namespace    https://github.com/Flkalas/aliexpress-userscripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  상품 수량 변경과 배송비 변경을 감지하여 총 가격과 개당 가격을 동적으로 계산하여 표시합니다.
 // @author       Mark Ha
 // @match        *://*.aliexpress.com/item/*
@@ -30,10 +30,10 @@
         if (/free\s*shipping|무료\s*배송|무료배송/i.test(text)) {
             return 0;
         }
-        const match = text.match(
-            /(?:Shipping|Standard|배송비?|운송비|스탠다드)\s*[:：]?\s*(?:US\s*)?(?:[$₩€£¥])?\s*([\d]+(?:[.,]\d+)?)/i
-        );
-        if (!match) return 0;
+        // 배송 방식 이름(Economy, Standard 등)은 바뀔 수 있으므로 통화 표시를 우선 읽는다.
+        const match = text.match(/(?:US\s*)?[$₩€£¥]\s*(\d[\d,]*(?:\.\d+)?)/i) ||
+            text.match(/(?:Shipping|Economy|Standard|배송비?|운송비|스탠다드)\s*[:：]?\s*(\d[\d,]*(?:\.\d+)?)/i);
+        if (!match) return null;
         return extractNumber(match[1]);
     }
 
@@ -79,20 +79,16 @@
         }
 
         const originalPrice = priceElement.textContent.split('(')[0].trim();
-        const shippingText = shippingContainer.innerText || '';
-
-        if (/free\s*shipping|무료\s*배송|무료배송/i.test(shippingText)) {
-            if (priceElement.textContent.includes('(')) {
-                priceElement.textContent = originalPrice;
-            }
-            return;
-        }
-
         const basePrice = extractNumber(originalPrice);
         const currency = extractCurrency(originalPrice);
         const quantity = parseInt(quantityElement.value, 10) || 1;
         const shipping = extractShippingCost(shippingContainer);
-        if (!basePrice) return;
+        if (!basePrice || shipping === null) {
+            if (priceElement.textContent !== originalPrice) {
+                priceElement.textContent = originalPrice;
+            }
+            return;
+        }
 
         const subtotal = basePrice * quantity;
         const total = subtotal + shipping;
